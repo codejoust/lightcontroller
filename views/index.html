@@ -1,0 +1,123 @@
+<html>
+<head>
+	<title>Lighting Settings Control Manager</title>
+
+</head>
+<body>
+	
+	<div class="lights" id="lightslist">
+		
+	</div>
+
+
+	<script id="lights_tpl" type="text/html">
+		<% for (var i = 0; i < lights.length; i++){ %>
+		<div class="light">
+			<span class="name"><%= lights[i].Name %></span>
+			<div data-light="<%= lights[i].Id %>" class="controls">
+				<a data-action="50" href="#">1</a>
+				 |
+				<a data-action="100" href="#">2</a>
+				 |
+				<a data-action="240" href="#">3</a>
+				 | 
+				<a data-action="0" href="#">off</a>
+			</div>
+		</div>
+		<% } %>
+	</script>
+
+	<script>
+		// Simple JavaScript Templating
+		// John Resig - http://ejohn.org/ - MIT Licensed
+		(function(){
+		  var cache = {};
+		  this.tmpl = function tmpl(str, data){
+		    // Figure out if we're getting a template, or if we need to
+		    // load the template - and be sure to cache the result.
+		    var fn = !/\W/.test(str) ?
+		      cache[str] = cache[str] ||
+		        tmpl(document.getElementById(str).innerHTML) :
+		     
+		      // Generate a reusable function that will serve as a template
+		      // generator (and which will be cached).
+		      new Function("obj",
+		        "var p=[],print=function(){p.push.apply(p,arguments);};" +
+		       
+		        // Introduce the data as local variables using with(){}
+		        "with(obj){p.push('" +
+		        // Convert the template into pure JavaScript
+		        str
+		          .replace(/[\r\t\n]/g, " ")
+		          .split("<%").join("\t")
+		          .replace(/((^|%>)[^\t]*)'/g, "$1\r")
+		          .replace(/\t=(.*?)%>/g, "',$1,'")
+		          .split("\t").join("');")
+		          .split("%>").join("p.push('")
+		          .split("\r").join("\\'")
+		      + "');}return p.join('');");
+		    // Provide some basic currying to the user
+		    return data ? fn( data ) : fn;
+		  };
+		})();
+	</script>
+
+	<script>
+		var light_control = {lights: null};
+
+		function get_request_url(url, done){
+			var req = new XMLHttpRequest();
+			req.onreadystatechange = function(state){
+				if (req.readyState == 4){
+					if (req.status === 200){
+						done(null, req.responseText)	
+					}
+					done(req, null)
+				}
+			}
+			req.open('GET', url);
+			req.send();
+		}
+
+		function setup_events(){
+			var lights = document.getElementById('lightslist');
+			lights.addEventListener('click', function(e){
+				if (e.target.nodeName == 'A'){
+					var action = e.target.attributes.getNamedItem("data-action");
+					var light = e.target.parentNode.attributes.getNamedItem('data-light');
+					if (action != null && light != null){
+						send_control(light.value, action.value);
+					}
+				}
+			})
+		}
+
+		setup_events();
+
+		function send_control(light, val){
+			get_request_url('/light/?light=' + light + '&value=' + val, function(err, data){
+				console.log([err, data]);
+			})
+		}
+
+		function render_controls(){
+			document.getElementById('lightslist').innerHTML = tmpl("lights_tpl")(light_control);
+		}
+
+		function download_data(){
+			get_request_url('/lights', function(err, data){
+				if (!err){
+					light_control.lights = JSON.parse(data);
+					render_controls();
+				} else {
+					//alert(err);
+				}
+			})
+		}
+
+		download_data();
+
+	</script>
+
+</body>
+</html>
