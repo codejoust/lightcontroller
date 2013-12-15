@@ -39,7 +39,6 @@ var allLights = []Light{
 	Light{7, 0, "led blue"},
 }
 
-
 var SerialPort io.ReadWriteCloser
 
 func connectSerial() {
@@ -110,6 +109,16 @@ func changeLightHandler(w http.ResponseWriter, r *http.Request){
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
+func turnOffAllLightsHandler(w http.ResponseWriter, r *http.Request){
+	for num, el := range allLights {
+		if el.Val > 0 {
+			go fadeLight(el, 0)
+			allLights[num].Val = 0
+		}
+	}
+	sendLightInfo(w)
+}
+
 func main(){
 	flag.Parse();
 
@@ -118,6 +127,8 @@ func main(){
 	http.HandleFunc("/", homePageHandler)
 	http.HandleFunc("/lights", getLightInfoHandler)
 	http.HandleFunc("/light/", changeLightHandler)
+	http.HandleFunc("/blackout", turnOffAllLightsHandler)
+
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *webPort), nil))
 
 }
